@@ -54,7 +54,7 @@ public enum NetInspectUI {
     ) {
         self.configuration = configuration
         let key = ObjectIdentifier(window)
-        guard observers[key] == nil, let root = window.rootViewController else {
+        guard observers[key] == nil else {
             return
         }
 
@@ -62,12 +62,16 @@ public enum NetInspectUI {
             guard let window else { return }
             present(in: window, configuration: configuration)
         }
-        root.addChild(observer)
         observer.view.frame = CGRect(x: 0, y: 0, width: 1, height: 1)
+        observer.view.autoresizingMask = [.flexibleRightMargin, .flexibleBottomMargin]
         observer.view.alpha = 0.01
         observer.view.isUserInteractionEnabled = false
-        root.view.addSubview(observer.view)
-        observer.didMove(toParent: root)
+        // A SwiftUI app commonly uses UIHostingController as its root. UIKit does
+        // not support adding UIKit-managed subviews directly to the hosting view,
+        // so keep the standalone observer beside it at the window level instead.
+        // The registry retains its controller; UIKit containment is intentionally
+        // omitted because its view is not inside a parent controller's view.
+        window.addSubview(observer.view)
         observers[key] = observer
         observer.activate()
     }
