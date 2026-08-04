@@ -86,6 +86,63 @@ public struct NetworkEvent: Codable, Sendable, Equatable {
     }
 }
 
+/// A group of network calls that share the same HTTP method and normalized URL.
+public struct DuplicateNetworkCall: Sendable, Equatable, Identifiable {
+    public let key: String
+    public let method: String
+    public let url: String
+    public let calls: [NetworkEvent]
+
+    public var id: String { key }
+
+    public init(key: String, method: String, url: String, calls: [NetworkEvent]) {
+        self.key = key
+        self.method = method
+        self.url = url
+        self.calls = calls
+    }
+}
+
+public extension NetworkEvent {
+    /// Stable comparison key used to detect repeated calls. Query items are sorted,
+    /// while their names and values remain part of the comparison.
+    var duplicateComparisonKey: String {
+        "\(method.uppercased()) \(normalizedURLForComparison)"
+    }
+
+    static func duplicateGroups(in events: [NetworkEvent]) -> [DuplicateNetworkCall] {
+        Dictionary(grouping: events, by: \.duplicateComparisonKey)
+            .compactMap { key, calls -> DuplicateNetworkCall? in
+                guard calls.count > 1, let first = calls.first else { return nil }
+                return DuplicateNetworkCall(
+                    key: key,
+                    method: first.method.uppercased(),
+                    url: first.normalizedURLForComparison,
+                    calls: calls.sorted { $0.timestamp < $1.timestamp }
+                )
+            }
+            .sorted { lhs, rhs in
+                let lhsLatest = lhs.calls.last?.timestamp ?? .distantPast
+                let rhsLatest = rhs.calls.last?.timestamp ?? .distantPast
+                return lhsLatest > rhsLatest
+            }
+    }
+
+    private var normalizedURLForComparison: String {
+        guard var components = URLComponents(string: url) else { return url }
+        components.scheme = components.scheme?.lowercased()
+        components.host = components.host?.lowercased()
+        components.fragment = nil
+        if let queryItems = components.queryItems {
+            components.queryItems = queryItems.sorted {
+                if $0.name == $1.name { return ($0.value ?? "") < ($1.value ?? "") }
+                return $0.name < $1.name
+            }
+        }
+        return components.string ?? url
+    }
+}
+
 public struct ConsoleLogEvent: Codable, Sendable, Equatable {
     public let id: UUID
     public let timestamp: Date

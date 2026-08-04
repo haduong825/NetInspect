@@ -206,6 +206,7 @@ public struct NetInspectMonitorView: View {
         case all = "All"
         case network = "Network"
         case console = "Console"
+        case duplicates = "Duplicates"
 
         var id: String { rawValue }
 
@@ -214,6 +215,7 @@ public struct NetInspectMonitorView: View {
             case .all: return "All events"
             case .network: return "Network"
             case .console: return "Console"
+            case .duplicates: return "Duplicates"
             }
         }
     }
@@ -287,6 +289,33 @@ public struct NetInspectMonitorView: View {
         }
     }
 
+    private var duplicateGroups: [DuplicateNetworkCall] {
+        let networkEvents = events.compactMap { event -> NetworkEvent? in
+            guard case .network(let network) = event else { return nil }
+            return network
+        }
+        return NetworkEvent.duplicateGroups(in: networkEvents)
+    }
+
+    private var visibleDuplicateGroups: [DuplicateNetworkCall] {
+        duplicateGroups.compactMap { group in
+            let calls = group.calls.filter { network in
+                let event = NetInspectEvent.network(network)
+                return matchesStatus(event) && matchesSearch(event)
+            }
+            guard !calls.isEmpty else { return nil }
+            let orderedCalls = calls.sorted {
+                sortOrder == .newest ? $0.timestamp > $1.timestamp : $0.timestamp < $1.timestamp
+            }
+            return DuplicateNetworkCall(
+                key: group.key,
+                method: group.method,
+                url: group.url,
+                calls: orderedCalls
+            )
+        }
+    }
+
     private var errorCount: Int {
         events.reduce(into: 0) { count, event in
             switch event {
@@ -312,7 +341,29 @@ public struct NetInspectMonitorView: View {
                 summaryHeader
                 eventTypePicker
 
-                if filteredEvents.isEmpty {
+                if filter == .duplicates && visibleDuplicateGroups.isEmpty {
+                    NetInspectEmptyState(
+                        hasEvents: !events.isEmpty,
+                        onClearFilters: clearFilters,
+                        emptyTitle: "No duplicate APIs",
+                        emptyMessage: "Repeated calls with the same method and URL will appear here."
+                    )
+                } else if filter == .duplicates {
+                    List {
+                        ForEach(visibleDuplicateGroups) { group in
+                            Section {
+                                ForEach(group.calls, id: \.id) { call in
+                                    NavigationLink(destination: NetInspectEventDetailView(event: .network(call))) {
+                                        NetInspectDuplicateCallRow(call: call)
+                                    }
+                                }
+                            } header: {
+                                NetInspectDuplicateGroupHeader(group: group)
+                            }
+                        }
+                    }
+                    .listStyle(.insetGrouped)
+                } else if filteredEvents.isEmpty {
                     NetInspectEmptyState(
                         hasEvents: !events.isEmpty,
                         onClearFilters: clearFilters
@@ -469,6 +520,9 @@ public struct NetInspectMonitorView: View {
         case .console:
             if case .console = event { return true }
             return false
+        case .duplicates:
+            guard case .network(let network) = event else { return false }
+            return duplicateGroups.contains { group in group.calls.contains { $0.id == network.id } }
         }
     }
 
@@ -555,6 +609,8 @@ private struct NetInspectMetricCard: View {
 private struct NetInspectEmptyState: View {
     let hasEvents: Bool
     let onClearFilters: () -> Void
+    var emptyTitle: String? = nil
+    var emptyMessage: String? = nil
 
     var body: some View {
         VStack(spacing: 12) {
@@ -564,9 +620,9 @@ private struct NetInspectEmptyState: View {
                 .frame(width: 72, height: 72)
                 .background(Color.accentColor.opacity(0.12))
                 .clipShape(Circle())
-            Text(hasEvents ? "No matching events" : "No events yet")
+            Text(emptyTitle ?? (hasEvents ? "No matching events" : "No events yet"))
                 .font(.headline)
-            Text(hasEvents ? "Try a different search or reset your filters." : "Network calls and console logs will appear here.")
+            Text(emptyMessage ?? (hasEvents ? "Try a different search or reset your filters." : "Network calls and console logs will appear here."))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -579,6 +635,51 @@ private struct NetInspectEmptyState: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
+    }
+}
+
+private struct NetInspectDuplicateGroupHeader: View {
+    let group: DuplicateNetworkCall
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(group.method)
+                    .font(.caption.weight(.bold))
+                Spacer()
+                Text("\(group.calls.count) calls")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+            }
+            Text(group.url)
+                .font(.caption)
+                .lineLimit(2)
+                .textCase(nil)
+        }
+        .foregroundStyle(.primary)
+        .padding(.vertical, 4)
+    }
+}
+
+private struct NetInspectDuplicateCallRow: View {
+    let call: NetworkEvent
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "clock.arrow.circlepath")
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(call.timestamp.formatted(date: .abbreviated, time: .standard))
+                    .font(.subheadline.monospacedDigit())
+                HStack(spacing: 6) {
+                    NetInspectStatusPill(network: call)
+                    Text(call.durationText)
+                        .foregroundStyle(.secondary)
+                }
+                .font(.caption)
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 
@@ -663,8 +764,9 @@ private struct NetInspectEventRow: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer(minLength: 4)
-                    Text(event.timestamp, style: .time)
+                    Text(event.timestamp.formatted(date: .numeric, time: .standard))
                         .font(.caption2)
+                        .monospacedDigit()
                         .foregroundStyle(.secondary)
                 }
 
@@ -883,7 +985,7 @@ private struct NetInspectEventDetailView: View {
         switch event {
         case .network(let network):
             items.append(.init(field: .method, value: network.method))
-            items.append(.init(field: .date, value: network.timestamp.formatted(date: .abbreviated, time: .omitted)))
+            items.append(.init(field: .date, value: network.timestamp.formatted(date: .abbreviated, time: .standard)))
             items.append(.init(field: .url, value: network.url))
             items.append(.init(field: .status, value: network.statusLabel))
             items.append(.init(field: .duration, value: network.durationText))
@@ -992,7 +1094,7 @@ private struct NetInspectEventDetailView: View {
                                 .font(.title3.weight(.bold))
                             NetInspectStatusPill(network: network, search: search)
                         }
-                        search.highlightedText(network.timestamp.formatted(date: .abbreviated, time: .omitted), field: .date)
+                        search.highlightedText(network.timestamp.formatted(date: .abbreviated, time: .standard), field: .date)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

@@ -39,7 +39,7 @@ Or add the repository to `Package.swift`:
 dependencies: [
     .package(
         url: "https://github.com/haduong825/NetInspect.git",
-        branch: "main"
+        from: "0.1.0"
     )
 ]
 ```
@@ -58,7 +58,7 @@ Then add only the products your target uses:
 )
 ```
 
-Using `main` is convenient while the package is pre-release. Pin a semantic version or exact revision in production.
+This uses Swift Package Manager's semantic-version requirement, so package updates can be resolved from release tags instead of commit IDs.
 
 ## Quick start
 

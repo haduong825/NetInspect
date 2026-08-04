@@ -83,6 +83,22 @@ final class CoreTests: XCTestCase {
         XCTAssertTrue(envelope.events.isEmpty)
     }
 
+    func testDuplicateNetworkGroupsCompareMethodAndNormalizedURLAndKeepCallTimes() {
+        let firstDate = Date(timeIntervalSince1970: 1_000)
+        let secondDate = Date(timeIntervalSince1970: 2_000)
+        let events = [
+            NetworkEvent(timestamp: secondDate, url: "https://EXAMPLE.com/users?b=2&a=1", method: "get"),
+            NetworkEvent(timestamp: firstDate, url: "https://example.com/users?a=1&b=2", method: "GET"),
+            NetworkEvent(timestamp: secondDate, url: "https://example.com/users?a=1&b=2", method: "POST")
+        ]
+
+        let groups = NetworkEvent.duplicateGroups(in: events)
+
+        XCTAssertEqual(groups.count, 1)
+        XCTAssertEqual(groups[0].method, "GET")
+        XCTAssertEqual(groups[0].calls.map(\.timestamp), [firstDate, secondDate])
+    }
+
     func testURLSessionConfigurationInstallsProtocol() {
         let configuration = NetInspectURLSession.configuration(basedOn: .ephemeral)
         XCTAssertTrue(configuration.protocolClasses?.contains { $0 == NetInspectURLProtocol.self } == true)
