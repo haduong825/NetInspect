@@ -39,7 +39,7 @@ Or add the repository to `Package.swift`:
 dependencies: [
     .package(
         url: "https://github.com/haduong825/NetInspect.git",
-        from: "0.1.0"
+        from: "0.1.1"
     )
 ]
 ```

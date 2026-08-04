@@ -23,9 +23,24 @@ private func resignActiveKeyboard() {
 }
 
 private final class NetInspectHostingController: UIHostingController<NetInspectMonitorView> {
+    var onDismiss: (() -> Void)?
+    private var isDismissingMonitor = false
+
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+        isDismissingMonitor = false
         dismissKeyboardAfterPresentation()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        isDismissingMonitor = isBeingDismissed
+    }
+
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        guard isDismissingMonitor else { return }
+        onDismiss?()
     }
 
     private func dismissKeyboardAfterPresentation() {
@@ -101,6 +116,17 @@ public enum NetInspectUI {
         let presenter = suppliedPresenter ?? window.topMostViewController
         guard let presenter, presenter.presentedViewController == nil else { return }
         let controller = makeViewController(configuration: configuration)
+        if let controller = controller as? NetInspectHostingController {
+            controller.onDismiss = { [weak window] in
+                // UIKit may still be restoring its responder chain while the
+                // dismissal callback runs, so reclaim first responder on the
+                // following run-loop turn.
+                DispatchQueue.main.async {
+                    guard let window else { return }
+                    observers[ObjectIdentifier(window)]?.activate()
+                }
+            }
+        }
         resignActiveKeyboard()
         presenter.present(controller, animated: true) {
             controller.view.endEditing(true)
