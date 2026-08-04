@@ -159,29 +159,12 @@ The optional adapter currently supports Alamofire 5.10.x, matching NetInspect's 
 - [Troubleshooting](docs/troubleshooting.md)
 - [Architecture decisions](docs/architecture/README.md)
 
-## Demo
-
-Open `Examples/NetInspectDemo/NetInspectDemo.xcodeproj`, select the `NetInspectDemo` scheme, and run it on an iOS 15+ Simulator or device. See the [demo guide](Examples/NetInspectDemo/README.md).
-
 ## Development
 
 Run package tests from the repository root:
 
 ```bash
 swift test
-```
-
-Build the demo without code signing:
-
-```bash
-xcodebuild \
-  -project Examples/NetInspectDemo/NetInspectDemo.xcodeproj \
-  -scheme NetInspectDemo \
-  -sdk iphonesimulator \
-  -configuration Debug \
-  -derivedDataPath /tmp/NetInspectDemoDerivedData \
-  CODE_SIGNING_ALLOWED=NO \
-  build
 ```
 
 ## Project status

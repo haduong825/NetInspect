@@ -1,0 +1,2 @@
+# Keep repository-only examples out of distributable source archives.
+/Examples export-ignore
