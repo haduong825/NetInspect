@@ -1,10 +1,17 @@
 import Foundation
 import SwiftUI
+import Alamofire
+import NetInspectAlamofire
 import NetInspectCore
 import NetInspectURLSession
 import NetInspectUI
 
 struct ContentView: View {
+    private enum NetworkClient: String {
+        case urlSession = "URLSession"
+        case alamofire = "Alamofire"
+    }
+
     private struct DemoService: Identifiable {
         let id: String
         let title: String
@@ -14,6 +21,7 @@ struct ContentView: View {
         let description: String
         let body: Data?
         let headers: [String: String]
+        let client: NetworkClient
     }
 
     private struct ServiceResult {
@@ -32,7 +40,8 @@ struct ContentView: View {
             url: URL(string: "https://jsonplaceholder.typicode.com/posts/1")!,
             description: "Public demo REST API returning a sample post.",
             body: nil,
-            headers: [:]
+            headers: [:],
+            client: .urlSession
         ),
         DemoService(
             id: "rest-countries",
@@ -42,7 +51,8 @@ struct ContentView: View {
             url: URL(string: "https://restcountries.com/v3.1/name/vietnam?fields=name,capital,population")!,
             description: "Live country data with a compact field selection.",
             body: nil,
-            headers: [:]
+            headers: [:],
+            client: .urlSession
         ),
         DemoService(
             id: "httpbin",
@@ -52,9 +62,12 @@ struct ContentView: View {
             url: URL(string: "https://httpbin.org/anything/netinspect-demo")!,
             description: "Echo service useful for inspecting request bodies and headers.",
             body: Data(#"{"source":"NetInspectDemo","message":"Hello from the demo app"}"#.utf8),
-            headers: ["Content-Type": "application/json"]
+            headers: ["Content-Type": "application/json"],
+            client: .alamofire
         )
     ]
+
+    private static let alamofireSession = NetInspectAlamofire.makeSession()
 
     @State private var events: [NetInspectEvent] = []
     @State private var results: [String: ServiceResult] = [:]
@@ -112,7 +125,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Service Playground")
                 .font(.largeTitle.weight(.bold))
-            Text("Call public APIs through the instrumented URLSession and inspect every request, response, and payload in NetInspect.")
+            Text("Call public APIs through instrumented URLSession and Alamofire clients, then inspect every request, response, and payload in NetInspect.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
@@ -132,12 +145,17 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Text(service.method)
-                    .font(.caption.weight(.bold).monospaced())
-                    .foregroundStyle(.blue)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.blue.opacity(0.12), in: Capsule())
+                VStack(alignment: .trailing, spacing: 5) {
+                    Text(service.method)
+                        .font(.caption.weight(.bold).monospaced())
+                        .foregroundStyle(.blue)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.blue.opacity(0.12), in: Capsule())
+                    Text(service.client.rawValue)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Text(service.description)
@@ -229,28 +247,39 @@ struct ContentView: View {
         request.httpBody = service.body
         service.headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
 
-        let session = NetInspectURLSession.makeSession()
-        session.dataTask(with: request) { data, response, error in
-            let httpResponse = response as? HTTPURLResponse
-            let result: ServiceResult
-
-            if let error {
-                result = ServiceResult(
-                    message: "Request failed",
-                    detail: error.localizedDescription,
-                    statusCode: httpResponse?.statusCode,
-                    isSuccess: false
-                )
-            } else {
-                result = summarize(data: data, service: service, statusCode: httpResponse?.statusCode)
+        switch service.client {
+        case .urlSession:
+            let session = NetInspectURLSession.makeSession()
+            session.dataTask(with: request) { data, response, error in
+                finishRequest(service, data: data, response: response, error: error)
+            }.resume()
+        case .alamofire:
+            Self.alamofireSession.request(request).responseData { response in
+                finishRequest(service, data: response.data, response: response.response, error: response.error)
             }
+        }
+    }
 
-            DispatchQueue.main.async {
-                results[service.id] = result
-                runningServices.remove(service.id)
-                refresh()
-            }
-        }.resume()
+    private func finishRequest(_ service: DemoService, data: Data?, response: URLResponse?, error: Error?) {
+        let httpResponse = response as? HTTPURLResponse
+        let result: ServiceResult
+
+        if let error {
+            result = ServiceResult(
+                message: "Request failed",
+                detail: error.localizedDescription,
+                statusCode: httpResponse?.statusCode,
+                isSuccess: false
+            )
+        } else {
+            result = summarize(data: data, service: service, statusCode: httpResponse?.statusCode)
+        }
+
+        DispatchQueue.main.async {
+            results[service.id] = result
+            runningServices.remove(service.id)
+            refresh()
+        }
     }
 
     private func summarize(data: Data?, service: DemoService, statusCode: Int?) -> ServiceResult {
