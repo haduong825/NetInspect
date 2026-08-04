@@ -1,0 +1,2 @@
+# Keep the demo in the repository, but omit it from distributable source archives.
+/Examples export-ignore

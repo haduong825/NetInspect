@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
 import Alamofire
-import NetInspectAlamofire
 import NetInspectCore
 import NetInspectURLSession
 import NetInspectUI

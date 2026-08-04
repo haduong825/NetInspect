@@ -14,7 +14,7 @@ NetInspect is a Swift Package for capturing requests made by explicitly configur
 - SwiftUI/UIKit monitor with search, filters, copy, JSON formatting, and cURL export
 - Structured application logs and an explicit `print` bridge
 - JSON export and optional batched telemetry
-- Core products have no third-party runtime dependencies; Alamofire support is isolated in an optional product
+- No third-party runtime dependencies
 
 ## Requirements
 
@@ -39,7 +39,7 @@ Or add the repository to `Package.swift`:
 dependencies: [
     .package(
         url: "https://github.com/haduong825/NetInspect.git",
-        from: "0.1.1"
+        from: "0.1.3"
     )
 ]
 ```
@@ -52,7 +52,6 @@ Then add only the products your target uses:
     dependencies: [
         .product(name: "NetInspectCore", package: "NetInspect"),
         .product(name: "NetInspectURLSession", package: "NetInspect"),
-        .product(name: "NetInspectAlamofire", package: "NetInspect"),
         .product(name: "NetInspectUI", package: "NetInspect")
     ]
 )
@@ -107,13 +106,15 @@ Button("Open Network Inspector") {
 
 ### Alamofire
 
-Add the `NetInspectAlamofire` product and create the app's Alamofire session through the factory:
+Applications that already depend on Alamofire can pass a NetInspect-enabled configuration when creating their session:
 
 ```swift
 import Alamofire
-import NetInspectAlamofire
+import NetInspectURLSession
 
-let session = NetInspectAlamofire.makeSession()
+let session = Session(
+    configuration: NetInspectURLSession.configuration(basedOn: .default)
+)
 
 session.request("https://example.com")
     .validate()
@@ -122,11 +123,11 @@ session.request("https://example.com")
     }
 ```
 
-Pass existing Alamofire customization directly to the factory:
+Pass the same configuration when using Alamofire customization:
 
 ```swift
-let session = NetInspectAlamofire.makeSession(
-    configuration: appURLSessionConfiguration,
+let session = Session(
+    configuration: NetInspectURLSession.configuration(basedOn: appURLSessionConfiguration),
     interceptor: authenticationInterceptor,
     serverTrustManager: trustManager,
     eventMonitors: eventMonitors
@@ -135,15 +136,12 @@ let session = NetInspectAlamofire.makeSession(
 
 Use this session instead of the global `AF` APIs. `AF` uses Alamofire's already-created shared session, so NetInspect cannot instrument it retroactively.
 
-The optional adapter currently supports Alamofire 5.10.x, matching NetInspect's Swift 5.9 toolchain requirement.
-
 ## Products
 
 | Product | Use it for |
 | --- | --- |
 | `NetInspectCore` | Configuration, events, storage, redaction, logs, and JSON export |
 | `NetInspectURLSession` | Capturing HTTP traffic from configured sessions |
-| `NetInspectAlamofire` | Creating Alamofire sessions with capture enabled |
 | `NetInspectUI` | The iOS SwiftUI/UIKit monitor and shake-to-present integration |
 | `NetInspectTransport` | Sending sanitized event batches to an HTTP endpoint |
 

@@ -10,26 +10,13 @@ let package = Package(
     products: [
         .library(name: "NetInspectCore", targets: ["NetInspectCore"]),
         .library(name: "NetInspectURLSession", targets: ["NetInspectURLSession"]),
-        .library(name: "NetInspectAlamofire", targets: ["NetInspectAlamofire"]),
         .library(name: "NetInspectTransport", targets: ["NetInspectTransport"]),
         .library(name: "NetInspectUI", targets: ["NetInspectUI"])
     ],
-    dependencies: [
-        .package(
-            url: "https://github.com/Alamofire/Alamofire.git",
-            from: "5.12.0"
-        )
-    ],
+    dependencies: [],
     targets: [
         .target(name: "NetInspectCore"),
         .target(name: "NetInspectURLSession", dependencies: ["NetInspectCore"]),
-        .target(
-            name: "NetInspectAlamofire",
-            dependencies: [
-                "NetInspectURLSession",
-                .product(name: "Alamofire", package: "Alamofire")
-            ]
-        ),
         .target(name: "NetInspectTransport", dependencies: ["NetInspectCore"]),
         .target(name: "NetInspectUI", dependencies: ["NetInspectCore"], path: "Sources/NetInspectUI"),
         .testTarget(
@@ -37,9 +24,7 @@ let package = Package(
             dependencies: [
                 "NetInspectCore",
                 "NetInspectURLSession",
-                "NetInspectAlamofire",
-                "NetInspectTransport",
-                .product(name: "Alamofire", package: "Alamofire")
+                "NetInspectTransport"
             ]
         ),
         .testTarget(

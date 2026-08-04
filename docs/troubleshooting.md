@@ -28,4 +28,4 @@ Verify the endpoint, authentication headers, and server response. Retryable fail
 
 ## Package resolution fails
 
-Confirm the deployment targets meet iOS 15/macOS 12 and the toolchain supports Swift tools version 5.9. NetInspect uses semantic versions; make sure the requested version (for example `0.1.1`) has a matching Git tag and that Xcode can access the repository.
+Confirm the deployment targets meet iOS 15/macOS 12 and the toolchain supports Swift tools version 5.9. NetInspect uses semantic versions; make sure the requested version (for example `0.1.3`) has a matching Git tag and that Xcode can access the repository.

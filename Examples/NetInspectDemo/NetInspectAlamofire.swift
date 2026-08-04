@@ -2,16 +2,12 @@ import Alamofire
 import Foundation
 import NetInspectURLSession
 
-/// Factory for Alamofire sessions whose traffic is captured by NetInspect.
-public enum NetInspectAlamofire {
-    /// Creates an Alamofire `Session` while preserving its standard customization points.
-    ///
-    /// Use the returned session instead of `AF` / `Session.default`, since those shared
-    /// sessions are created before NetInspect can install its `URLProtocol`.
-    public static func makeSession(
+/// Demo-only factory for Alamofire sessions whose traffic is captured by NetInspect.
+enum NetInspectAlamofire {
+    static func makeSession(
         configuration: URLSessionConfiguration = .default,
         delegate: SessionDelegate = SessionDelegate(),
-        rootQueue: DispatchQueue = DispatchQueue(label: "com.netinspect.alamofire.rootQueue"),
+        rootQueue: DispatchQueue = DispatchQueue(label: "com.netinspect.demo.alamofire.rootQueue"),
         startRequestsImmediately: Bool = true,
         requestQueue: DispatchQueue? = nil,
         serializationQueue: DispatchQueue? = nil,

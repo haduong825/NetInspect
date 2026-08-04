@@ -1,7 +1,5 @@
 import Foundation
 import XCTest
-import Alamofire
-@testable import NetInspectAlamofire
 @testable import NetInspectCore
 @testable import NetInspectURLSession
 @testable import NetInspectTransport
@@ -103,31 +101,6 @@ final class CoreTests: XCTestCase {
         let configuration = NetInspectURLSession.configuration(basedOn: .ephemeral)
         XCTAssertTrue(configuration.protocolClasses?.contains { $0 == NetInspectURLProtocol.self } == true)
         XCTAssertTrue(NetInspectURLProtocol.canInit(with: URLRequest(url: URL(string: "https://example.com")!)))
-    }
-
-    func testAlamofireFactoryInstallsProtocolAndPreservesConfiguration() {
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.httpAdditionalHeaders = ["X-NetInspect-Test": "enabled"]
-
-        let session = NetInspectAlamofire.makeSession(configuration: configuration)
-
-        XCTAssertTrue(session.session.configuration.protocolClasses?.contains {
-            $0 == NetInspectURLProtocol.self
-        } == true)
-        XCTAssertEqual(
-            session.session.configuration.httpAdditionalHeaders?["X-NetInspect-Test"] as? String,
-            "enabled"
-        )
-    }
-
-    func testAlamofireFactoryDoesNotMutateInputConfiguration() {
-        let configuration = URLSessionConfiguration.ephemeral
-
-        _ = NetInspectAlamofire.makeSession(configuration: configuration)
-
-        XCTAssertFalse(configuration.protocolClasses?.contains {
-            $0 == NetInspectURLProtocol.self
-        } == true)
     }
 
     func testHTTPTransportSendsJSON() async throws {

@@ -1,6 +1,6 @@
 # NetInspectDemo
 
-Open `NetInspectDemo.xcodeproj` in Xcode and select an iOS 15+ Simulator or device. The project already references the local package and includes `DemoApp.swift`, `ContentView.swift`, and the required `NetInspectCore`, `NetInspectURLSession`, `NetInspectAlamofire`, `NetInspectUI`, and `NetInspectTransport` products.
+Open `NetInspectDemo.xcodeproj` in Xcode and select an iOS 15+ Simulator or device. The project references the local NetInspect package and depends on Alamofire directly for its demo-only integration.
 
 At app startup, configure:
 

@@ -14,7 +14,7 @@ For a manifest-based project:
 dependencies: [
     .package(
         url: "https://github.com/haduong825/NetInspect.git",
-        from: "0.1.1"
+        from: "0.1.3"
     )
 ]
 ```
@@ -63,14 +63,14 @@ NetInspect captures requests only from enabled sessions. It does not modify `URL
 
 ## Alamofire
 
-Add the `NetInspectAlamofire` product to the application target, then create the Alamofire session once and inject it into networking services:
+Add Alamofire to the application target itself, then create its session with a NetInspect-enabled configuration:
 
 ```swift
 import Alamofire
-import NetInspectAlamofire
+import NetInspectURLSession
 
-let session = NetInspectAlamofire.makeSession(
-    configuration: .default,
+let session = Session(
+    configuration: NetInspectURLSession.configuration(basedOn: .default),
     interceptor: authenticationInterceptor
 )
 
@@ -79,7 +79,7 @@ session.request("https://example.com/profile").response { response in
 }
 ```
 
-The factory accepts Alamofire's interceptor, trust manager, redirect handler, cache handler, queues, and event monitors. Requests made through the global `AF` shortcut are not captured.
+Other Alamofire customization can be passed to `Session` normally. Requests made through the global `AF` shortcut are not captured.
 
 ## 4. Open the monitor
 
