@@ -88,7 +88,7 @@ public enum NetInspectUI {
     public static func makeViewController(
         configuration: NetInspectUIConfiguration = .init()
     ) -> UIViewController {
-        let controller = NetInspectHostingController(rootView: NetInspectMonitorView(title: configuration.title))
+        let controller = NetInspectHostingControllegit r(rootView: NetInspectMonitorView(title: configuration.title))
         controller.modalPresentationStyle = configuration.presentationStyle
         return controller
     }

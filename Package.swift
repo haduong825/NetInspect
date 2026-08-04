@@ -17,7 +17,7 @@ let package = Package(
     dependencies: [
         .package(
             url: "https://github.com/Alamofire/Alamofire.git",
-            "5.10.2"..<"5.11.0"
+            from: "5.12.0"
         )
     ],
     targets: [
